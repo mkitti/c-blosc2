@@ -49,10 +49,12 @@ endif()
 if(NOT DEACTIVATE_ZSTD)
     if(ZSTD_FOUND)
         set(BLOSC_INCLUDE_DIRS ${BLOSC_INCLUDE_DIRS} ${ZSTD_INCLUDE_DIR})
+        message(STATUS "Zstd found")
     else()
         set(ZSTD_LOCAL_DIR ${INTERNAL_LIBS}/zstd-1.4.5)
         set(BLOSC_INCLUDE_DIRS ${BLOSC_INCLUDE_DIRS} ${ZSTD_LOCAL_DIR}
                 ${ZSTD_LOCAL_DIR}/common ${ZSTD_LOCAL_DIR}/dictBuilder)
+        message(STATUS "Zstd included")
     endif()
 endif()
 
@@ -61,7 +63,7 @@ include_directories(${BLOSC_INCLUDE_DIRS})
 # library sources
 set(SOURCES blosc2.c blosc2-common.h blosclz.c fastcopy.c fastcopy.h schunk.c frame.c btune.c btune.h
         context.h delta.c delta.h shuffle-generic.c bitshuffle-generic.c trunc-prec.c trunc-prec.h
-        timestamp.c)
+        timestamp.c ndlz.c)
 if(COMPILER_SUPPORT_SSE2)
     message(STATUS "Adding run-time support for SSE2")
     set(SOURCES ${SOURCES} shuffle-sse2.c bitshuffle-sse2.c)
