@@ -32,7 +32,7 @@ static bool is_HCR(blosc2_context * context) {
     case BLOSC_NDLZ :
       return false;
     default :
-      fprintf(stderr, "Error in is_COMP_HCR: codec %d not handled\n",
+      BLOSC_TRACE_ERROR("Error in is_COMP_HCR: codec %d not handled.",
               context->compcode);
   }
   return false;
