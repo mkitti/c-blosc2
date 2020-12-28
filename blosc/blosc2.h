@@ -647,6 +647,7 @@ typedef struct {
   //!< The shape of a block (NULL). Pointer to an array of ndim ints.
 } blosc2_cparams;
 
+
 /**
  * @brief Default struct for compression params meant for user initialization.
  */

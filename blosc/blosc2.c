@@ -890,6 +890,7 @@ static int blosc_c(struct thread_context* thread_context, int32_t bsize,
         dict_training = true;
         _sw32(dest - 4, -257);
       }
+
     }
 
     else {

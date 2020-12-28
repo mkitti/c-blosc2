@@ -23,6 +23,7 @@ extern "C" {
 #include "fastcopy.h"
 */
 
+
 #define NDLZ_VERSION_STRING "1.0.0"
 
 

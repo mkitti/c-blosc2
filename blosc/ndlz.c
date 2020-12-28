@@ -25,6 +25,7 @@
 
 
 
+
 /*
  * Give hints to the compiler for branch prediction optimization.
  */
@@ -45,6 +46,7 @@
 
 #define MAX_COPY 32U
 #define MAX_DISTANCE 65535
+
 
 #ifdef BLOSC_STRICT_ALIGN
   #define NDLZ_READU16(p) ((p)[0] | (p)[1]<<8)
