@@ -772,6 +772,7 @@ static int blosc_c(struct thread_context* thread_context, int32_t bsize,
   }
   neblock = bsize / nstreams;
   for (j = 0; j < nstreams; j++) {
+    printf("\n Stream %d \n", j);
     if (!dict_training) {
       dest += sizeof(int32_t);
       ntbytes += sizeof(int32_t);
@@ -870,40 +871,51 @@ static int blosc_c(struct thread_context* thread_context, int32_t bsize,
   #endif /* HAVE_ZSTD */
     else if (context->compcode == BLOSC_NDLZ) {
       uint8_t* ndlz_out = malloc(maxout);
-      int32_t nbytes = ndlz_compress(context, _src + j * neblock,
-                                     (int)neblock, ndlz_out, (int)maxout);
+      int32_t ndlz_cbytes = ndlz_compress(context, _src + j * neblock,
+                                          (int)neblock, ndlz_out, (int)maxout);
 
-      printf("\n nbytes: %d \n", nbytes);
+      printf("\n ndlz_cbytes: %d \n", ndlz_cbytes);
 
       bool ndlz_c = true;
-      if (nbytes == 0) {          // no ndlz compression
+      if (ndlz_cbytes == 0) {          // no ndlz compression
         ndlz_c = false;
-        nbytes = neblock;
+        ndlz_cbytes = neblock;
         memcpy(ndlz_out, _src + j * neblock, neblock);
       }
-
+/*
       printf("data_comp_ndlz: \n");
       for (int i = 0; i < neblock; i++) {
         printf("%u, ", ndlz_out[i]);
       }
-
+*/
       void *hash_table = NULL;
     #ifdef HAVE_IPP
       hash_table = (void*)thread_context->lz4_hash_table;
     #endif
-      cbytes = lz4_wrap_compress((char*)ndlz_out, (size_t)nbytes,
+      cbytes = lz4_wrap_compress((char*)ndlz_out, (size_t)ndlz_cbytes,
                                  (char*)dest, (size_t)maxout, accel, hash_table);
+      free(ndlz_out);
 
-      if ((cbytes == 0) && (ndlz_c)) { // no lz4 compression
-        cbytes = nbytes;
-        dict_training = true;   // only_one_comp
-        _sw32(dest - 4, -256);
+      printf("\n cbytes: %d \n", cbytes);
 
-      } else if ((cbytes > 0) && (! ndlz_c)) { // no NDLZ compression
-        dict_training = true;
-        _sw32(dest - 4, -257);
+      if (((cbytes == 0) && (ndlz_c)) || ((cbytes > 0) && (!ndlz_c))) {
+        ntbytes += 1;
+        ctbytes += 1;
+        if (ntbytes > destsize) {
+          /* Not enough space to write out compressed block size */
+          return -1;
+        }
+        if (ndlz_c) { // no lz4 compression
+          cbytes = ndlz_cbytes;
+          _sw32(dest - 4, -cbytes);
+          dest[0] = 0x4;   // set special compression bits (1,2) in token
+        } else { // no NDLZ compression
+          _sw32(dest - 4, -cbytes);
+          dest[0] = 0x12;   // set special compression bits (1,2) in token
+        }
+        dest += 1;
+        printf("\n -cbytes: %d \n", -cbytes);
       }
-
     }
 
     else {
@@ -1131,6 +1143,11 @@ static int blosc_d(
     nstreams = 1;
   }
 
+  printf("\n blosc_d src: %d \n", sw32_(src));
+  for (int i = 0; i < srcsize; i++) {
+    printf("%u, ", src[i]);
+  }
+
   neblock = bsize / nstreams;
   for (int j = 0; j < nstreams; j++) {
     if (srcsize < sizeof(int32_t)) {
@@ -1139,8 +1156,7 @@ static int blosc_d(
     }
     srcsize -= sizeof(int32_t);
     cbytes = sw32_(src);      /* amount of compressed bytes */
-
-    printf("\n cbytes: %d \n", cbytes);
+    printf("\n cbytes in blosc_d: %d \n", cbytes);
 
     if (cbytes > 0) {
       if (srcsize < cbytes) {
@@ -1173,6 +1189,13 @@ static int blosc_d(
         memset(_dest, value, (unsigned int) neblock);
         nbytes = neblock;
         cbytes = 0;  // everything is encoded in the cbytes token
+      } else if (compformat == BLOSC_NDLZ_FORMAT) {
+        if (token & 0x4) {  // no lz4 compression
+          nbytes = ndlz_decompress(src, -cbytes, _dest, (int) neblock);
+        } else if (token & 0x12) { // no ndlz compression
+          nbytes = lz4_wrap_decompress((char*)src, (size_t) (-cbytes),
+                                       (char*)_dest, (size_t)neblock);
+        }
       }
     }
     else if (cbytes == neblock) {
@@ -1223,23 +1246,11 @@ static int blosc_d(
         return -5;    /* signals no decompression support */
       }
       else if (compformat == BLOSC_NDLZ_FORMAT) {
-        if (cbytes == -256) { // NO LZ4 decompression
-          nbytes = ndlz_decompress(src, cbytes, _dest, (int) neblock);
-        } else if (cbytes == -257) {  // NO NDLZ decompression
-          nbytes = lz4_wrap_decompress((char*)src, (size_t)cbytes,
-                                       (char*)_dest, (size_t)neblock);
-        } else {
-          uint8_t *lz4_out = malloc(neblock);
-          int32_t lz4_bytes = lz4_wrap_decompress((char *) src, (size_t) cbytes,
-                                                  (char *) lz4_out, (size_t) neblock);
-
-          printf("\n data_dec_lz4: \n");
-          for (int i = 0; i < lz4_bytes; i++) {
-            printf("%u, ", lz4_out[i]);
-          }
-
-          nbytes = ndlz_decompress(lz4_out, lz4_bytes, _dest, (int) lz4_bytes);
-        }
+        uint8_t *lz4_out = malloc(neblock);
+        int32_t lz4_bytes = lz4_wrap_decompress((char *) src, (size_t) cbytes,
+                                                (char *) lz4_out, (size_t) neblock);
+        nbytes = ndlz_decompress(lz4_out, lz4_bytes, _dest, (int) lz4_bytes);
+        free(lz4_out);
       }
       else {
         // Unknown format
