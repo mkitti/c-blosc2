@@ -873,7 +873,7 @@ static int blosc_c(struct thread_context* thread_context, int32_t bsize,
       int32_t ndlz_cbytes = ndlz_compress(context, _src + j * neblock,
                                           (int)neblock, ndlz_out, (int)maxout);
 
-     // printf("\n ndlz_cbytes: %d \n", ndlz_cbytes);
+      printf("\n ndlz_cbytes: %d \n", ndlz_cbytes);
 
       bool ndlz_c = true;
       if (ndlz_cbytes == 0) {          // no ndlz compression
@@ -899,7 +899,7 @@ static int blosc_c(struct thread_context* thread_context, int32_t bsize,
   */
       free(ndlz_out);
 
-    //  printf("\n cbytes: %d \n", cbytes);
+      printf("\n cbytes: %d \n", cbytes);
 
       if (((cbytes == 0) && (ndlz_c)) || ((cbytes > 0) && (!ndlz_c))) {
         ntbytes += 1;
@@ -922,7 +922,7 @@ static int blosc_c(struct thread_context* thread_context, int32_t bsize,
           } */
           dest[-1] = 0x12;   // set special compression bits (1,2) in token
         }
-    //    printf("\n -cbytes: %d \n", -cbytes);
+        printf("\n -cbytes: %d \n", -cbytes);
         goto special_comp;
       } else if ((cbytes == 0) && (! ndlz_c)) {
         dest -= 1;
@@ -1171,7 +1171,7 @@ static int blosc_d(
     }
     srcsize -= sizeof(int32_t);
     cbytes = sw32_(src);      /* amount of compressed bytes */
-//    printf("\n cbytes in blosc_d: %d \n", cbytes);
+    printf("\n cbytes in blosc_d: %d \n", cbytes);
 
     if (cbytes > 0) {
       if (srcsize < cbytes) {
@@ -1272,7 +1272,7 @@ static int blosc_d(
       */
         int32_t dec_bytes = blosclz_decompress(src, (int)cbytes, dec_out, (int)neblock);
 
-      //  printf("\n dec_bytes: %d \n", dec_bytes);
+        printf("\n dec_bytes: %d \n", dec_bytes);
         nbytes = ndlz_decompress(dec_out, dec_bytes, _dest, (int) neblock);
         free(dec_out);
       }
