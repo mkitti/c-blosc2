@@ -174,7 +174,7 @@ int ndlz_compress(blosc2_context* context, const void* input, int length,
         }
 */
         if (NDLZ_UNEXPECT_CONDITIONAL(op + 16 > op_limit)) {
-          printf("Literal copy \n");
+      //    printf("Literal copy \n");
           return 0;
         }
         const uint8_t* ref;
@@ -439,7 +439,7 @@ int ndlz_compress(blosc2_context* context, const void* input, int length,
 
       }
       if((op - obase) > length) {
-        printf("Compressed data is bigger than input! \n");
+     //   printf("Compressed data is bigger than input! \n");
         return 0;
       }
    //g   printf("\n token %u, pad [%u, %u] \n", token, padding[0], padding[1]);
