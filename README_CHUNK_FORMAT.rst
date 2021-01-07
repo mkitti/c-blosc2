@@ -208,6 +208,9 @@ where `uint8_t token` is a byte for providing different meanings to `int32 csize
     :bits 2 and 3:
         Reserved for two-codes in a row. TODO: complete description
 
+    :bits 4, 5 and 6:
+        Reserved for secondary codecs. TODO: complete description
+
 If bit 4 of the `flags` header field is set, each block is stored in a single data stream::
 
     +=========+
