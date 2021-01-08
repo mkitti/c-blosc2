@@ -140,6 +140,11 @@ int ndlz_compress(blosc2_context* context, const void* input, int length,
       }
       update_pair[2] = 0;
 
+      if (NDLZ_UNEXPECT_CONDITIONAL(op + 16 + 1 > op_limit)) {
+        //    printf("Literal copy \n");
+        return 0;
+      }
+
       uint32_t orig = ii[0] * 4 * blockshape[1] + ii[1] * 4;
       if (((blockshape[0] % 4 != 0) && (ii[0] == i_stop[0] - 1)) || ((blockshape[1] % 4 != 0) && (ii[1] == i_stop[1] - 1))) {
         token = 0;                                   // padding -> literal copy
@@ -167,16 +172,6 @@ int ndlz_compress(blosc2_context* context, const void* input, int length,
         }
         buf_cell -= 16;
 
-/*
-        printf("\n buf_cell: ");
-        for (int i = 0; i < 16; i++) {
-            printf("%u, ", buf_cell[i]);
-        }
-*/
-        if (NDLZ_UNEXPECT_CONDITIONAL(op + 16 > op_limit)) {
-      //    printf("Literal copy \n");
-          return 0;
-        }
         const uint8_t* ref;
         uint32_t distance;
         uint8_t* anchor = op;    /* comparison starting-point */
@@ -222,7 +217,6 @@ int ndlz_compress(blosc2_context* context, const void* input, int length,
           bool literal = true;
 
           // 2 rows pairs matches
-
           for (int j = 1; j < 4; j++) {
             memcpy(buf_pair, buf_cell, 4);
             memcpy(&buf_pair[4], &buf_cell[j * 4], 4);
