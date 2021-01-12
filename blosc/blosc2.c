@@ -869,7 +869,7 @@ static int blosc_c(struct thread_context* thread_context, int32_t bsize,
     }
   #endif /* HAVE_ZSTD */
     else if (context->compcode == BLOSC_NDLZ) {
-      uint8_t* ndlz_out = malloc(neblock);
+      uint8_t* ndlz_out = malloc(maxout);
       int32_t ndlz_cbytes = ndlz_compress(context, _src + j * neblock,
                                           (int)neblock, ndlz_out, (int)maxout);
 

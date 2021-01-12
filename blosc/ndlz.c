@@ -80,6 +80,11 @@ int ndlz_compress(blosc2_context* context, const void* input, int length,
     return -1;
   }
 
+  if (NDLZ_UNEXPECT_CONDITIONAL(maxout < 1 + ndim * sizeof(int32_t))) {
+    printf("Output too small \n");
+    return -1;
+  }
+
   uint8_t* ip = (uint8_t *) input;
   uint8_t* op = (uint8_t *) output;
   uint8_t* op_limit;
@@ -647,17 +652,21 @@ int ndlz_decompress(const void* input, int length, void* output, int maxout) {
         memcpy(&buffercpy[m * 4], ip - offset_2 + 4, 4);
 
       } else {
-     //   printf("Invalid token: %u at cell [%d, %d]\n", token, ii[0], ii[1]);
+        printf("Invalid token: %u at cell [%d, %d]\n", token, ii[0], ii[1]);
         return 0;
       }
       // fill op with buffercpy
       uint32_t orig = ii[0] * 4 * blockshape[1] + ii[1] * 4;
-      for (int i = 0; i < 4; i++) {
+      for (uint32_t i = 0; i < 4; i++) {
         if (i < padding[0]) {
           ind = orig + i * blockshape[1];
           memcpy(&op[ind], buffercpy, padding[1]);
         }
         buffercpy += padding[1];
+      }
+      if (ind > maxout) {
+        printf("Output size is bigger than max \n");
+        return 0;
       }
     }
   }
