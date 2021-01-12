@@ -870,11 +870,10 @@ static int blosc_c(struct thread_context* thread_context, int32_t bsize,
   #endif /* HAVE_ZSTD */
     else if (context->compcode == BLOSC_NDLZ) {
       uint8_t* ndlz_out = malloc(maxout);
-    /*  int32_t ndlz_cbytes = ndlz_compress(context, _src + j * neblock,
+      int32_t ndlz_cbytes = ndlz_compress(context, _src + j * neblock,
                                           (int)neblock, ndlz_out, (int)maxout);
-*/
-      int32_t ndlz_cbytes = blosclz_compress(context->clevel, _src + j * neblock,
-                                             (int)neblock, ndlz_out, (int)maxout);
+
+  //    printf("\n ndlz_cbytes: %d \n", ndlz_cbytes);
 
       bool ndlz_c = true;
       if (ndlz_cbytes == 0) {          // no ndlz compression
@@ -893,20 +892,22 @@ static int blosc_c(struct thread_context* thread_context, int32_t bsize,
     #ifdef HAVE_IPP
       hash_table = (void*)thread_context->lz4_hash_table;
     #endif
-/*
+ /*     cbytes = blosclz_compress(context->clevel, ndlz_out,
+                                (int)ndlz_cbytes, dest, (int)maxout);
+
       cbytes = lz4_wrap_compress((char*)ndlz_out, (size_t)ndlz_cbytes,
                                  (char*)dest, (size_t)maxout, accel, hash_table);
 
       cbytes = lizard_wrap_compress((char*)ndlz_out, (size_t)ndlz_cbytes,
                            (char*)dest, (size_t)maxout, accel);
-*/
+
       cbytes = zstd_wrap_compress(thread_context,
                                   (char*)ndlz_out, (size_t)ndlz_cbytes,
                                   (char*)dest, (size_t)maxout, context->clevel);
-/*
+*/
       cbytes = zlib_wrap_compress((char*)ndlz_out, (size_t)ndlz_cbytes,
                                   (char*)dest, (size_t)maxout, context->clevel);
-*/
+
       if (((cbytes == 0) && (ndlz_c)) || ((cbytes > 0) && (!ndlz_c))) {
         ntbytes += 1;
         ctbytes += 1;
@@ -1223,22 +1224,22 @@ static int blosc_d(
         cbytes = 0;  // everything is encoded in the cbytes token
       } else if (compformat == BLOSC_NDLZ_FORMAT) {
         if (token & 0x4) {  // no lz4 compression
-        //  nbytes = ndlz_decompress(src, (int) (-cbytes), _dest, (int) neblock);
-          nbytes = blosclz_decompress(src, (int) (-cbytes), _dest, (int) neblock);
+          nbytes = ndlz_decompress(src, (int) (-cbytes), _dest, (int) neblock);
         } else if (token & 0x12) { // no ndlz compression
-  /*        nbytes = LZ4_decompress_safe((char*)src, (char*)_dest,
+      /*    nbytes = LZ4_decompress_safe((char*)src, (char*)_dest,
                                        (int) (-cbytes), (int) neblock);
+          nbytes = blosclz_decompress(src, (int) (-cbytes), _dest, (int) neblock);
 
           nbytes = lizard_wrap_decompress((char*)src, (size_t) (-cbytes),
                                           (char*)_dest, (size_t)neblock);
-*/
+
           nbytes = zstd_wrap_decompress(thread_context,
                                         (char*)src, (size_t) (-cbytes),
                                         (char*)_dest, (size_t)neblock);
-/*
+*/
           nbytes = zlib_wrap_decompress((char*)src, (size_t) (-cbytes),
                                         (char*)_dest, (size_t)neblock);
-*/
+
         } else {
           printf("\n special dec ERR \n");
         }
@@ -1294,22 +1295,23 @@ static int blosc_d(
       }
       else if (compformat == BLOSC_NDLZ_FORMAT) {
         uint8_t *dec_out = malloc(neblock);
- /*       int32_t dec_bytes = LZ4_decompress_safe((char *) src, (char *) dec_out,
+/*        int32_t dec_bytes = LZ4_decompress_safe((char *) src, (char *) dec_out,
                                                 (int) cbytes, (int) neblock);
+
+        int32_t dec_bytes = blosclz_decompress(src, (int)cbytes, dec_out, (int)neblock);
 
         int32_t dec_bytes = lizard_wrap_decompress((char*)src, (size_t)cbytes,
                                         (char*)dec_out, (size_t)neblock);
-*/
+
         int32_t dec_bytes = zstd_wrap_decompress(thread_context,
                                       (char*)src, (size_t)cbytes,
                                       (char*)dec_out, (size_t)neblock);
-/*
+        */
         int32_t dec_bytes = zlib_wrap_decompress((char*)src, (size_t)cbytes,
                                       (char*)dec_out, (size_t)neblock);
-*/
+
      //   printf("\n dec_bytes: %d \n", dec_bytes);
-      //  nbytes = ndlz_decompress(dec_out, dec_bytes, _dest, (int) neblock);
-        nbytes = blosclz_decompress(dec_out, (int)dec_bytes, _dest, (int)neblock);
+        nbytes = ndlz_decompress(dec_out, dec_bytes, _dest, (int) neblock);
         free(dec_out);
       }
       else {
