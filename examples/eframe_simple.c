@@ -1,23 +1,17 @@
 /*
-  Copyright (C) 2015  Francesc Alted
-  http://blosc.org
-  License: BSD 3-Clause (see LICENSE.txt)
+ Copyright (C) 2020  The Blosc Developers
+ http://blosc.org
+ License: BSD 3-Clause (see LICENSE.txt)
 
-  Example program demonstrating use of the Blosc filter from C code.
+ Example program demonstrating use of the Blosc filter from C code.
 
-  To compile this program:
+ To compile this program:
 
-  $ gcc schunk_simple.c -o schunk_simple -lblosc2
+ $ gcc eframe_simple.c -o eframe_simple -lblosc2
 
-  To run:
+ To run:
 
-  $ ./schunk_simple
-  Blosc version info: 2.0.0-beta.1 ($Date:: 2019-08-09 #$)
-  Compression ratio: 381.5 MB -> 12.2 MB (31.2x)
-  Compression time: 0.119 s, 3192.9 MB/s
-  Decompression time: 0.035 s, 10888.3 MB/s
-  Successful roundtrip data <-> schunk !
-
+ $ ./eframe_simple
 */
 
 #include <stdio.h>
@@ -31,10 +25,11 @@
 #define NCHUNKS 100
 #define NTHREADS 4
 
+
 int main(void) {
   static int32_t data[CHUNKSIZE];
   static int32_t data_dest[CHUNKSIZE];
-  int32_t isize = CHUNKSIZE * sizeof(int32_t);
+  size_t isize = CHUNKSIZE * sizeof(int32_t);
   int dsize;
   int64_t nbytes, cbytes;
   blosc2_cparams cparams = BLOSC2_CPARAMS_DEFAULTS;
@@ -45,13 +40,12 @@ int main(void) {
   double ttotal;
 
   printf("Blosc version info: %s (%s)\n", blosc_get_version_string(), BLOSC_VERSION_DATE);
-
   /* Create a super-chunk container */
   cparams.typesize = sizeof(int32_t);
   cparams.clevel = 9;
   cparams.nthreads = NTHREADS;
   dparams.nthreads = NTHREADS;
-  blosc2_storage storage = {.cparams=&cparams, .dparams=&dparams};
+  blosc2_storage storage = {false, "dir1.b2eframe", .cparams=&cparams, .dparams=&dparams};
   schunk = blosc2_schunk_new(storage);
 
   blosc_set_timestamp(&last);
@@ -61,8 +55,8 @@ int main(void) {
     }
     int nchunks = blosc2_schunk_append_buffer(schunk, data, isize);
     if (nchunks != nchunk + 1) {
-        printf("Unexpected nchunks!");
-        return -1;
+      printf("Unexpected nchunks!");
+      return -1;
     }
   }
   /* Gather some info */
@@ -101,9 +95,12 @@ int main(void) {
 
   printf("Successful roundtrip data <-> schunk !\n");
 
+  /* Remove directory */
+  blosc2_remove_dir(storage.urlpath);
   /* Free resources */
   /* Destroy the super-chunk */
   blosc2_schunk_free(schunk);
 
   return 0;
 }
+
