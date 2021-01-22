@@ -113,7 +113,7 @@ int ndlz_compress(blosc2_context* context, const void* input, int length,
   }
 
   /* input and output buffer cannot be less than 16 and 66 bytes or we can get into trouble */
-  int overhead = 17 + (blockshape[0] * blockshape[1] / 16 - 1) * 3;
+  int overhead = 17 + (blockshape[0] * blockshape[1] / 16 - 1) * 2;
   if (length < 16 || maxout < overhead) {
     printf("Incorrect length or maxout");
     return 0;
@@ -279,7 +279,7 @@ int ndlz_compress(blosc2_context* context, const void* input, int length,
                 same = false;
               }
               if (same) {
-                distance = (int32_t) (anchor - l * 4 - ref);
+                distance = (int32_t) (anchor + l * 4 - ref);
               } else {
                 distance = 0;
               }
@@ -329,7 +329,7 @@ int ndlz_compress(blosc2_context* context, const void* input, int length,
                 ref = obase + tab_triple[hval];
 
                 if (same) {
-                  distance = (int32_t) (anchor - i * 4 - ref);
+                  distance = (int32_t) (anchor + i * 4 - ref);
                 } else {
                   distance = 0;
                 }
@@ -384,7 +384,7 @@ int ndlz_compress(blosc2_context* context, const void* input, int length,
                 }
               }
               if (same) {
-                distance = (int32_t) (anchor - i * 4 - ref);
+                distance = (int32_t) (anchor + i * 4 - ref);
               } else {
                 distance = 0;
               }
@@ -546,6 +546,10 @@ int ndlz_decompress(const void* input, int length, void* output, int maxout) {
   uint8_t cell_aux[16];
   for (ii[0] = 0; ii[0] < i_stop[0]; ++ii[0]) {
     for (ii[1] = 0; ii[1] < i_stop[1]; ++ii[1]) {      // for each cell
+      if (NDLZ_UNEXPECT_CONDITIONAL(ip > ip_limit)) {
+        printf("Literal copy \n");
+        return 0;
+      }
       if (ii[0] == i_stop[0] - 1) {
         padding[0] = (blockshape[0] % 4 == 0) ? 4 : blockshape[0] % 4;
       } else {
