@@ -59,7 +59,7 @@
 #define HASH_LOG (12)
 
 
-int ndlz_compress(blosc2_context* context, const void* input, int length,
+int ndlz8_compress(blosc2_context* context, const void* input, int length,
                     void* output, int maxout) {
 
   const int cell_shape = 8;
@@ -675,7 +675,7 @@ int valueinarray(int val, const int *arr){
 }
 
 
-int ndlz_decompress(const void* input, int length, void* output, int maxout) {
+int ndlz8_decompress(const void* input, int length, void* output, int maxout) {
 
   const int cell_shape = 8;
   const int cell_size = 64;
@@ -757,7 +757,7 @@ int ndlz_decompress(const void* input, int length, void* output, int maxout) {
         offset += 3;
         ip += 2;
         int index = 0;
-        for (int l = 0; l < 8; l++) {
+        for (int l = 0; l < cell_shape; l++) {
           if ((l != i) && (l != j)) {
             memcpy(&buffercpy[l * cell_shape], ip - offset + index * cell_shape, cell_shape);
             index++;
@@ -789,7 +789,7 @@ int ndlz_decompress(const void* input, int length, void* output, int maxout) {
         for (int l = 0; l < 3; l++) {
           memcpy(&buffercpy[rows[3 + l] * cell_shape], ip - offset_2 + l * cell_shape, cell_shape);
         }
-        for (int l = 0; l < 8; l++) {
+        for (int l = 0; l < cell_shape; l++) {
           if (! valueinarray(l, rows)) {
             memcpy(&buffercpy[l * cell_shape], ip, cell_shape);
             ip += cell_shape;
@@ -810,103 +810,101 @@ int ndlz_decompress(const void* input, int length, void* output, int maxout) {
         for (int l = 0; l < 3; l++) {
           memcpy(&buffercpy[rows[l] * cell_shape], ip - offset + l * cell_shape, cell_shape);
         }
-        for (int l = 0; l < 8; l++) {
+        for (int l = 0; l < cell_shape; l++) {
           if (! valueinarray(l, rows)) {
             memcpy(&buffercpy[l * cell_shape], ip, cell_shape);
             ip += cell_shape;
           }
         }
-
-
-      } else if ((token >= 224) && (token <= 255)) { // three rows match
+      } else if (match_type == 33) {    // 3 pair matches
         buffercpy = local_buffer;
+        ip--;
+        uint32_t token_3;
+        memcpy(&token_3, ip, 3);
+        ip += 3;
+        int rows[6];
+        for (int l = 0; l < 6; l++) {
+          rows[l] = (int) ((token_3 >> (8 + 15 - 3 * l)) & 7);
+        }
         uint16_t offset = *((uint16_t*) ip);
         offset += 3;
-        ip += 2;
-        int i, j, k;
-        if ((token >> 3U) == 28) {
-          i = 1;
-          j = 2;
-          k = 3;
-        } else {
-          i = 0;
-          if ((token >> 3U) < 30) {
-            j = 1;
-            k = 2;
-          } else {
-            k = 3;
-            if ((token >> 3U) == 30) {
-              j = 1;
-            } else {
-              j = 2;
-            }
-          }
-        }
-        memcpy(&buffercpy[i * 4], ip - offset, 4);
-        memcpy(&buffercpy[j * 4], ip - offset + 4, 4);
-        memcpy(&buffercpy[k * 4], ip - offset + 8, 4);
-        for (int l = 0; l < 4; l++) {
-          if ((l != i) && (l != j) && (l != k)) {
-            memcpy(&buffercpy[l * 4], ip, 4);
-            ip += 4;
-            break;
-          }
-        }
-
-      } else if ((token >= 128) && (token <= 191)){ // rows pair match
-        buffercpy = local_buffer;
-        uint16_t offset = *((uint16_t*) ip);
-        offset += 3;
-        ip += 2;
-        int i, j;
-        if (token == 128) {
-          i = 2;
-          j = 3;
-        } else {
-          i = (token - 128) >> 5U;
-          j = ((token - 128) >> 3U) - (i << 2U);
-        }
-        memcpy(&buffercpy[i * 4], ip - offset, 4);
-        memcpy(&buffercpy[j * 4], ip - offset + 4, 4);
-        for (int k = 0; k < 4; k++) {
-          if ((k != i) && (k != j)) {
-            memcpy(&buffercpy[k * 4], ip, 4);
-            ip += 4;
-          }
-        }
-      } else if ((token >= 40) && (token <= 63)) {  // 2 rows pair matches
-        buffercpy = local_buffer;
-        uint16_t offset_1 = *((uint16_t*) ip);
-        offset_1 += 5;
         ip += 2;
         uint16_t offset_2 = *((uint16_t*) ip);
-        offset_2 += 5;
+        offset_2 += 3;
         ip += 2;
-        int i, j, k, l, m;
-        i = 0;
-        j = ((token - 32) >> 3U);
-        l = -1;
-        for (k = 1; k < 4; k++) {
-          if ((k != i) && (k != j)) {
-            if (l == -1) {
-              l = k;
-            } else {
-              m = k;
-            }
+        uint16_t offset_3 = *((uint16_t*) ip);
+        offset_3 += 3;
+        ip += 2;
+        for (int l = 0; l < 2; l++) {
+          memcpy(&buffercpy[rows[l] * cell_shape], ip - offset + l * cell_shape, cell_shape);
+        }
+        for (int l = 0; l < 2; l++) {
+          memcpy(&buffercpy[rows[2 + l] * cell_shape], ip - offset_2 + l * cell_shape, cell_shape);
+        }
+        for (int l = 0; l < 2; l++) {
+          memcpy(&buffercpy[rows[4 + l] * cell_shape], ip - offset_3 + l * cell_shape, cell_shape);
+        }
+        for (int l = 0; l < cell_shape; l++) {
+          if (! valueinarray(l, rows)) {
+            memcpy(&buffercpy[l * cell_shape], ip, cell_shape);
+            ip += cell_shape;
           }
         }
-        memcpy(&buffercpy[i * 4], ip - offset_1, 4);
-        memcpy(&buffercpy[j * 4], ip - offset_1 + 4, 4);
-        memcpy(&buffercpy[l * 4], ip - offset_2, 4);
-        memcpy(&buffercpy[m * 4], ip - offset_2 + 4, 4);
-
+      } else if ((match_type >> 2U) == 11) {    // 2 pair matches
+        buffercpy = local_buffer;
+        ip--;
+        uint16_t token_2 = *((uint16_t*) ip);
+        ip += 2;
+        int rows[4];
+        for (int l = 0; l < 4; l++) {
+          rows[l] = (int) ((token_2 >> (9 - 3 * l)) & 7);
+        }
+        uint16_t offset = *((uint16_t*) ip);
+        offset += 3;
+        ip += 2;
+        uint16_t offset_2 = *((uint16_t*) ip);
+        offset_2 += 3;
+        ip += 2;
+        for (int l = 0; l < 2; l++) {
+          memcpy(&buffercpy[rows[l] * cell_shape], ip - offset + l * cell_shape, cell_shape);
+        }
+        for (int l = 0; l < 2; l++) {
+          memcpy(&buffercpy[rows[2 + l] * cell_shape], ip - offset_2 + l * cell_shape, cell_shape);
+        }
+        for (int l = 0; l < cell_shape; l++) {
+          if (! valueinarray(l, rows)) {
+            memcpy(&buffercpy[l * cell_shape], ip, cell_shape);
+            ip += cell_shape;
+          }
+        }
+      } else if (match_type == 34) {    // pair match
+        buffercpy = local_buffer;
+        ip--;
+        uint16_t token_2 = *((uint16_t*) ip);
+        ip += 2;
+        int rows[2];
+        for (int l = 0; l < 2; l++) {
+          rows[l] = (int) ((token_2 >> (3 - 3 * l)) & 7);
+        }
+        uint16_t offset = *((uint16_t*) ip);
+        offset += 3;
+        ip += 2;
+        for (int l = 0; l < 2; l++) {
+          memcpy(&buffercpy[rows[l] * cell_shape], ip - offset + l * cell_shape, cell_shape);
+        }
+        for (int l = 0; l < cell_shape; l++) {
+          if (! valueinarray(l, rows)) {
+            memcpy(&buffercpy[l * cell_shape], ip, cell_shape);
+            ip += cell_shape;
+          }
+        }
       } else {
         printf("Invalid token: %u at cell [%d, %d]\n", token, ii[0], ii[1]);
         return 0;
       }
       // fill op with buffercpy
-      uint32_t orig = ii[0] * 4 * blockshape[1] + ii[1] * 4;
-      for (uint32_t i = 0; i < 4; i++) {
+      uint32_t orig = ii[0] * cell_shape * blockshape[1] + ii[1] * cell_shape;
+      for (uint32_t i = 0; i < cell_shape; i++) {
         if (i < padding[0]) {
           ind = orig + i * blockshape[1];
           memcpy(&op[ind], buffercpy, padding[1]);

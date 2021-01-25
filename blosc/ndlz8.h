@@ -8,8 +8,8 @@
 
 
 
-#ifndef NDLZ_H
-#define NDLZ_H
+#ifndef NDLZ8_H
+#define NDLZ8_H
 #include "context.h"
 
 #if defined (__cplusplus)
@@ -17,11 +17,6 @@ extern "C" {
 #endif
 #define XXH_INLINE_ALL
 #include <xxhash.h>
-/*
-#include <stdio.h>
-#include "blosc2-common.h"
-#include "fastcopy.h"
-*/
 
 
 #define NDLZ_VERSION_STRING "1.0.0"
@@ -47,7 +42,7 @@ extern "C" {
   The input buffer and the output buffer can not overlap.
 */
 
-int ndlz_compress(blosc2_context* context, const void* input, int length, void* output, int maxout);
+int ndlz8_compress(blosc2_context* context, const void* input, int length, void* output, int maxout);
 
 /**
   Decompress a block of compressed data and returns the size of the
@@ -61,7 +56,7 @@ int ndlz_compress(blosc2_context* context, const void* input, int length, void* 
   more than what is specified in maxout.
  */
 
-int ndlz_decompress(const void* input, int length, void* output, int maxout);
+int ndlz8_decompress(const void* input, int length, void* output, int maxout);
 
 #if defined (__cplusplus)
 }
