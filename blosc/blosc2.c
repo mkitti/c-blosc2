@@ -2437,6 +2437,10 @@ int handle_runlen(blosc2_context* context, uint8_t* src, uint32_t nbytes, uint8_
   context->header_overhead = BLOSC_EXTENDED_HEADER_LENGTH;  // a Blosc2 chunk
   int32_t cbytes_chunk = src[BLOSC2_CHUNK_CBYTES];
   int32_t typesize = src[BLOSC2_CHUNK_TYPESIZE];
+  // Some checks for malformed headers
+  if (typesize <= 0 || typesize > BLOSC_MAX_TYPESIZE) {
+    return -1;
+  }
   bool all_zeros = src[BLOSC2_CHUNK_BLOSC2_FLAGS] & (BLOSC2_ZERO_RUNLEN << 4);
   bool all_nans = src[BLOSC2_CHUNK_BLOSC2_FLAGS] & (BLOSC2_NAN_RUNLEN << 4);
   if ((cbytes_chunk != context->header_overhead + typesize) && (cbytes_chunk != context->header_overhead)) {
@@ -3558,7 +3562,7 @@ int blosc2_chunk_zeros(const size_t nbytes, const size_t typesize, void* dest, s
   uint8_t* dest_ = dest;
   int32_t nbytes_ = (int32_t)nbytes;
 
-  if (typesize > 255) {
+  if (typesize == 0 || typesize > 255) {
     BLOSC_TRACE_ERROR("typesize cannot be larger than 255 bytes");
     return -1;
   }
@@ -3592,7 +3596,7 @@ int blosc2_chunk_nans(const size_t nbytes, const size_t typesize, void* dest, si
   uint8_t* dest_ = dest;
   int32_t nbytes_ = (int32_t)nbytes;
 
-  if (typesize > 255) {
+  if (typesize == 0 || typesize > 255) {
     BLOSC_TRACE_ERROR("typesize cannot be larger than 255 bytes");
     return -1;
   }
@@ -3627,7 +3631,7 @@ int blosc2_chunk_repeatval(const size_t nbytes, const size_t typesize, void* des
   uint8_t* dest_ = dest;
   int32_t nbytes_ = (int32_t)nbytes;
 
-  if (typesize > 255) {
+  if (typesize == 0 || typesize > 255) {
     BLOSC_TRACE_ERROR("typesize cannot be larger than 255 bytes");
     return -1;
   }

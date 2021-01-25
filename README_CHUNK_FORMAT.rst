@@ -203,11 +203,18 @@ where `uint8_t token` is a byte for providing different meanings to `int32 csize
     :token:
     (``bitfield``) Flags for different meanings.
 
-    :bits 0 and 1:
-        Reserved for two-codes in a row. TODO: complete description
 
-    :bits 2, 3 and 4:
-        Reserved for secondary codecs. TODO: complete description
+    :bit 0:
+        The cdata stream is a run-length of a repeated bytes.
+
+    :bits 1 and 2:
+        Reserved for two-codecs in a row. TODO: complete description
+
+    :bits 3, 4 and 5:
+        Reserved for secondary codec. TODO: complete description
+
+    :bits 6 and 7:
+        Reserved for future use.
 
 If bit 4 of the `flags` header field is set, each block is stored in a single data stream::
 
