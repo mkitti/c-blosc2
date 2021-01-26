@@ -916,12 +916,12 @@ static int blosc_c(struct thread_context* thread_context, int32_t bsize,
         if (ndlz_c) { // no lz4 compression
           cbytes = ndlz_cbytes;
           _sw32(dest - 4, -cbytes);
-          dest[0] = 0x4;   // set special compression bits (1,2) in token
+          dest[0] = 0x2;   // set special compression bits (1,2) in token
           dest ++;
           memcpy(dest, ndlz_out, ndlz_cbytes);
         } else { // no NDLZ compression
           _sw32(dest - 5, -cbytes);
-          dest[-1] = 0x12;   // set special compression bits (1,2) in token
+          dest[-1] = 0x6;   // set special compression bits (1,2) in token
         }
    //     printf("\n -cbytes: %d \n", -cbytes);
         free(ndlz_out);
@@ -1240,9 +1240,9 @@ static int blosc_d(
         nbytes = neblock;
         cbytes = 0;  // everything is encoded in the cbytes token
     /*  } else if (compformat == BLOSC_NDLZ_FORMAT) {
-        if (token & 0x4) {  // no lz4 compression
+        if (token & 0x2) {  // no lz4 compression
           nbytes = ndlz_decompress(src, (int) (-cbytes), _dest, (int) neblock);
-        } else if (token & 0x12) { // no ndlz compression
+        } else if (token & 0x6) { // no ndlz compression
       /*    nbytes = LZ4_decompress_safe((char*)src, (char*)_dest,
                                        (int) (-cbytes), (int) neblock);
           nbytes = blosclz_decompress(src, (int) (-cbytes), _dest, (int) neblock);
