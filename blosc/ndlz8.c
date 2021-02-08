@@ -59,18 +59,6 @@
 #define HASH_LOG (12)
 
 
-int cut_up_token(uint32_t token, uint8_t *parts, int size) {
-  if (size == sizeof(uint16_t)) {
-    parts[0] = (uint8_t) ((token >> 8U) & 255);
-    parts[1] = (uint8_t) (token & 255);
-  }
-  if (size == sizeof(uint32_t)) {
-    parts[0] = (uint8_t) ((token >> 16U) & 255);
-    parts[1] = (uint8_t) ((token >> 8U) & 255);
-    parts[2] = (uint8_t) (token & 255);
-  }
-}
-
 int ndlz8_compress(blosc2_context* context, const void* input, int length,
                     void* output, int maxout) {
 
@@ -246,77 +234,10 @@ int ndlz8_compress(blosc2_context* context, const void* input, int length,
           uint8_t token = (uint8_t) (1U << 6U);
           *op++ = token;
           *op++ = buf_cell[0];
-//          printf("\n comp token %u, pad [%u, %u] \n", token, padding[0], padding[1]);
-  //        printf("%u, ", token);
 
         } else if (distance == 0 || (distance >= MAX_DISTANCE)) {   // no cell match
           bool literal = true;
 
-          // 6 rows match
-/*          for (int i = 0; i < 7; i++) {
-            for (int j = i + 1; j < 8; j++) {
-              int ind = 0;
-              for (int k = 0; k < cell_shape; k++) {
-                if (k != i && k != j) {
-                  memcpy(&buf_6[ind * cell_shape], &buf_cell[k * cell_shape], cell_shape);
-                  ind++;
-                }
-              }
-              hval = XXH32(buf_6, 48, 1);        // calculate rows pair hash
-              hval >>= 32U - 12U;
-              ref = obase + tab_6[hval];
-              // calculate distance to the match
-              bool same = true;
-              uint16_t offset;
-              if (tab_6[hval] != 0) {
-                buf_aux = obase + tab_6[hval];
-                for (int k = 0; k < 48; k++) {
-                  if (buf_6[k] != buf_aux[k]) {
-                    same = false;
-                    break;
-                  }
-                }
-                offset = (uint16_t) (anchor - obase - tab_6[hval]);
-              } else {
-                same = false;
-                int l;
-                if (((i == 0) && ((j == 1) || (j == 7))) || ((i == 6) && (j == 7))) {
-                  if (j == 1) {
-                    l = 2;
-                  } else if (i == 6) {
-                    l = 0;
-                  } else {
-                    l = 1;
-                  }
-                  update_6[l] = (uint32_t) (anchor + 1 + l * cell_shape - obase);     // update hash table
-                  hash_6[l] = hval;
-                }
-              }
-              if (same) {
-                distance = (int32_t) (anchor - ref);
-              } else {
-                distance = 0;
-              }
-              if ((distance != 0) && (distance < MAX_DISTANCE)) {     // 6 rows match
-                literal = false;
-                uint16_t token = (uint16_t) ((38 << 10U) | (i << 7U) | (j << 4U));
-  //              printf("\n comp token %hu, pad [%u, %u] \n", token, padding[0], padding[1]);
-                uint8_t token_parts[2];
-                cut_up_token((uint32_t) token, token_parts, sizeof(token));
-  //              printf("%u, ", token_parts[0]);
-                memcpy(op, token_parts, 2);
-                op += 2;
-                memcpy(op, &offset, 2);
-                op += 2;
-                memcpy(op, &buf_cell[i * cell_shape], cell_shape);
-                op += cell_shape;
-                memcpy(op, &buf_cell[j * cell_shape], cell_shape);
-                op += cell_shape;
-                goto match;
-              }
-            }
-          }
-*/
           // rows triples matches
           triple_match[0] = 0;
           for (int i = 0; i < 6; i++) {
@@ -394,134 +315,25 @@ int ndlz8_compress(blosc2_context* context, const void* input, int length,
             }
             if ((distance != 0) && (distance < MAX_DISTANCE)) {     /* 1 rows pair match */
               literal = false;
-              pair_matches[0] = 1;
-              pair_matches[1] = i;
-              pair_matches[2] = hval;
-              for (int i_ = i + 2; i_ < 7; i_++) {
-                pair_start = i_ * cell_shape;
-                hval = XXH32(&buf_cell[pair_start], 16, 1);        // calculate rows pair hash
-                hval >>= 32U - 12U;
-                ref = obase + tab_pair[hval];
-                same = true;
-                uint16_t offset_2;
-                if (tab_pair[hval] != 0) {
-                  buf_aux = obase + tab_pair[hval];
-                  for (int k = 0; k < 16; k++) {
-                    if (buf_cell[pair_start + k] != buf_aux[k]) {
-                      same = false;
-                      break;
-                    }
-                  }
-                  offset_2 = (uint16_t) (anchor - obase - tab_pair[hval]);
-                } else {
-                  same = false;
-                }
-                if (same) {
-                  distance = (int32_t) (anchor + pair_start - ref);
-                } else {
-                  distance = 0;
-                }
-                if ((distance != 0) && (distance < MAX_DISTANCE)) {   /* 2 pair matches */
-                  pair_matches[0] = 2;
-                  pair_matches[3] = i_;
-                  pair_matches[4] = hval;
-                  for (int i__ = i_ + 2; i__ < 7; i__++) {
-                    pair_start = i__ * cell_shape;
-                    hval = XXH32(&buf_cell[pair_start], 16, 1);        // calculate rows pair hash
-                    hval >>= 32U - 12U;
-                    ref = obase + tab_pair[hval];
-                    same = true;
-                    if (tab_pair[hval] != 0) {
-                      buf_aux = obase + tab_pair[hval];
-                      for (int k = 0; k < 16; k++) {
-                        if (buf_cell[pair_start + k] != buf_aux[k]) {
-                          same = false;
-                          break;
-                        }
-                      }
-                    } else {
-                      same = false;
-                    }
-                    if (same) {
-                      distance = (int32_t) (anchor + pair_start - ref);
-                    } else {
-                      distance = 0;
-                    }
-                    if ((distance != 0) && (distance < MAX_DISTANCE)) {   /* 3 pair matches */
-                      uint16_t token = (uint16_t) ((19 << 11U) | (i << 8U) | (i_ << 5U) | (i__ << 2U));
-                      // asumming little endian
-                      uint8_t token_parts[2];
-                      cut_up_token(token, token_parts, sizeof(token));
-                      memcpy(op, token_parts, 2);
-                      op += 2;
-                      uint16_t offset_3 = (uint16_t) (anchor - obase - tab_pair[hval]);
-                      *(uint16_t *) op = offset;
-                      op += sizeof(offset);
-                       *(uint16_t *) op = offset_2;
-                      op += sizeof(offset_2);
-                      *(uint16_t *) op = offset_3;
-                      op += sizeof(offset_3);
-                      for (int l = 0; l < 8; l++) {
-                        if ((l < i) || (l > i__ + 1) || ((l > i + 1) && (l < i_)) || ((l > i_ + 1) && (l < i__))) {
-                          memcpy(op, &buf_cell[l * cell_shape], cell_shape);
-                          op += cell_shape;
-                        }
-                      }
-                      goto match;
-                    }
-                  }
-                }
-              }
-            }
-          }
-
-          if (!literal) {
-            if (pair_matches[0] == 2) {   // 2 pair matches
-              int first_row = pair_matches[1];
-              int sec_row = pair_matches[3];
-              uint16_t token = (uint16_t) ((18 << 11U) | (first_row << 8U) | (sec_row << 5U));
-              uint8_t token_parts[2];
-              cut_up_token((uint32_t) token, token_parts, sizeof(token));
-              memcpy(op, token_parts, 2);
-              op += 2;
-  //            printf("\n comp token %u, %u pad [%u, %u] \n", op[-2], op[-1], padding[0], padding[1]);
-  //            printf("%u, ", token_parts[0]);
-              uint16_t offset = (uint16_t) (anchor - obase - tab_pair[pair_matches[2]]);
+              uint8_t token = (uint8_t) ((17 << 3U) | i);
+              *op++ = token;
+              offset = (uint16_t) (anchor - obase - tab_pair[hval]);
               memcpy(op, &offset, 2);
-              op += 2;
-              uint16_t offset_2 = (uint16_t) (anchor - obase - tab_pair[pair_matches[4]]);
-              memcpy(op, &offset_2, 2);
               op += 2;
               for (int l = 0; l < 8; l++) {
-                if ((l < first_row) || (l > sec_row + 1) || ((l > first_row + 1) && (l < sec_row))) {
+                if ((l < i) || (l > i + 1)) {
                   memcpy(op, &buf_cell[l * cell_shape], cell_shape);
                   op += cell_shape;
                 }
               }
-            } else if(pair_matches[0] == 1) {   // 1 pair match
-              uint8_t token = (uint8_t) ((17 << 3U) | pair_matches[1]);
-              *op++ = token;
-              uint16_t offset = (uint16_t) (anchor - obase - tab_pair[pair_matches[2]]);
-              memcpy(op, &offset, 2);
-              op += 2;
-              for (uint32_t l = 0; l < 8; l++) {
-                if ((l < pair_matches[1]) || (l > pair_matches[1] + 1)) {
-                  memcpy(op, &buf_cell[l * cell_shape], cell_shape);
-                  op += cell_shape;
-                }
-              }
+              goto match;
             }
           }
 
           match:
           if (literal) {
             tab_cell[hash_cell] = (uint32_t) (anchor + 1 - obase);     /* update hash tables */
-/*            if (update_6[0] != 0) {
-              for (int h = 0; h < 3; h++) {
-                tab_6[hash_6[h]] = update_6[h];
-              }
-            }
-*/
+
             if (update_triple[0] != 0) {
               for (int h = 0; h < 6; h++) {
                 tab_triple[hash_triple[h]] = update_triple[h];
@@ -536,8 +348,7 @@ int ndlz8_compress(blosc2_context* context, const void* input, int length,
             *op++ = token;
             memcpy(op, buf_cell, cell_size);
             op += cell_size;
-  //          printf("\n comp token %u, pad [%u, %u] \n", token, padding[0], padding[1]);
-  //          printf("%u, ", token);
+
           }
 
         } else {   // cell match
@@ -546,16 +357,13 @@ int ndlz8_compress(blosc2_context* context, const void* input, int length,
           uint16_t offset = (uint16_t) (anchor - obase - tab_cell[hash_cell]);
           memcpy(op, &offset, 2);
           op += 2;
-  //        printf("\n comp token %u, pad [%u, %u] \n", token, padding[0], padding[1]);
-  //        printf("%u, ", token);
+
         }
 
       }
       if((op - obase) > length) {
-     //   printf("Compressed data is bigger than input! \n");
         return 0;
       }
-//      printf("\n comp token %u, pad [%u, %u] \n", token, padding[0], padding[1]);
     }
   }
 
@@ -617,13 +425,6 @@ static unsigned char* copy_match_16(unsigned char *op, const unsigned char *matc
   return op;
 }
 #endif
-
-int value_in_array(int val, const int *arr, int size) {
-  for (int i = 0; i < size; i++) {
-    if (arr[i] == val) return 1;
-  }
-  return 0;
-}
 
 
 int ndlz8_decompress(const void* input, int length, void* output, int maxout) {
@@ -697,29 +498,6 @@ int ndlz8_decompress(const void* input, int length, void* output, int maxout) {
         buffercpy = cell_aux;
         memset(buffercpy, *ip, cell_size);
         ip++;
-/*      } else if (match_type == 38) {    // 6 rows match
-        buffercpy = local_buffer;
-        uint8_t token_2 = *((uint8_t *) ip);
-        uint16_t token_f = (token << 8U) | token_2;
-  //      printf("\n token_f %hu", token_f);
-        ip ++;
-        int i = (int) ((token_f >> 7U) & 7);
-        int j = (int) ((token_f >> 4U) & 7);
-        uint16_t offset = *((uint16_t*) ip);
-        ip += 2;
-        int index = 0;
-        for (int l = 0; l < cell_shape; l++) {
-          if ((l != i) && (l != j)) {
-            memcpy(&buffercpy[l * cell_shape],
-                   ip - offset - sizeof(token_f) - sizeof(offset) + index * cell_shape, cell_shape);
-            index++;
-          }
-        }
-        memcpy(&buffercpy[i * cell_shape], ip, cell_shape);
-        ip += cell_shape;
-        memcpy(&buffercpy[j * cell_shape], ip, cell_shape);
-        ip += cell_shape;
-*/
       } else if (match_type == 21) {    // triple match
         buffercpy = local_buffer;
         int row = (int) (token & 7);
@@ -731,66 +509,6 @@ int ndlz8_decompress(const void* input, int length, void* output, int maxout) {
         }
         for (int l = 0; l < cell_shape; l++) {
           if ((l < row) || (l > row + 2)) {
-            memcpy(&buffercpy[l * cell_shape], ip, cell_shape);
-            ip += cell_shape;
-          }
-        }
-      } else if (match_type == 19) {    // 3 pair matches
-        buffercpy = local_buffer;
-        uint8_t token_2 = *((uint8_t *) ip);
-        ip++;
-        uint16_t token_f = (uint16_t) ((token << 8U) | token_2);
-  //      printf("token2,3 %u, %u", token_2, token_3);
-  //      printf("\n token_f %u", token_f);
-        int row_1 = (int) ((token_f >> 8U) & 7);
-        int row_2 = (int) ((token_f >> 5U) & 7);
-        int row_3 = (int) ((token_f >> 2U) & 7);
-
-        uint16_t offset = *((uint16_t*) ip);
-        ip += sizeof(offset);
-        uint16_t offset_2 = *((uint16_t*) ip);
-        ip += sizeof(offset_2);
-        uint16_t offset_3 = *((uint16_t*) ip);
-        ip += sizeof(offset_3);
-        int off_token_size = sizeof(token_f) + sizeof(offset) + sizeof(offset_2) + sizeof(offset_3);
-        for (int l = 0; l < 2; l++) {
-          memcpy(&buffercpy[(row_1 + l) * cell_shape], ip - off_token_size - offset + l * cell_shape, cell_shape);
-        }
-        for (int l = 0; l < 2; l++) {
-          memcpy(&buffercpy[(row_2 + l) * cell_shape], ip - off_token_size - offset_2 + l * cell_shape, cell_shape);
-        }
-        for (int l = 0; l < 2; l++) {
-          memcpy(&buffercpy[(row_3 + l) * cell_shape], ip - off_token_size - offset_3 + l * cell_shape, cell_shape);
-        }
-        for (int l = 0; l < cell_shape; l++) {
-          if ((l < row_1) || (l > row_3 + 1) || ((l > row_1 + 1) && (l < row_2)) || ((l > row_2 + 1) && (l < row_3))) {
-            memcpy(&buffercpy[l * cell_shape], ip, cell_shape);
-            ip += cell_shape;
-          }
-        }
-      } else if (match_type == 11) {    // 2 pair matches
-        buffercpy = local_buffer;
-        uint8_t token_2 = *((uint8_t *) ip);
-        uint16_t token_f = (token << 8U) | token_2;
-  //      printf("\n token_f %hu", token_f);
-        ip ++;
-        int row_1 = (int) ((token_f >> 8) & 7);
-        int row_2 = (int) ((token_f >> 5) & 7);
-
-        uint16_t offset = *((uint16_t*) ip);
-        ip += 2;
-        uint16_t offset_2 = *((uint16_t*) ip);
-        ip += 2;
-        for (int l = 0; l < 2; l++) {
-          memcpy(&buffercpy[(row_1 + l) * cell_shape], ip - sizeof(token_f) - sizeof(offset)
-                 - sizeof(offset_2) - offset + l * cell_shape, cell_shape);
-        }
-        for (int l = 0; l < 2; l++) {
-          memcpy(&buffercpy[(row_2 + l) * cell_shape], ip - sizeof(token_f) - sizeof(offset)
-                 - sizeof(offset_2) - offset_2 + l * cell_shape, cell_shape);
-        }
-        for (int l = 0; l < cell_shape; l++) {
-          if ((l < row_1) || (l > row_2 + 1) || ((l > row_1 + 1) && (l < row_2))) {
             memcpy(&buffercpy[l * cell_shape], ip, cell_shape);
             ip += cell_shape;
           }
@@ -814,12 +532,7 @@ int ndlz8_decompress(const void* input, int length, void* output, int maxout) {
         printf("Invalid token: %u at cell [%d, %d]\n", token, ii[0], ii[1]);
         return 0;
       }
-      // fill op with buffercpy
- /*     printf("\n buffercpy \n");
-      for (int i = 0; i < cell_size; i++) {
-        printf("%u, ", buffercpy[i]);
-      }
-*/
+
       uint32_t orig = ii[0] * cell_shape * blockshape[1] + ii[1] * cell_shape;
       for (uint32_t i = 0; i < cell_shape; i++) {
         if (i < padding[0]) {
