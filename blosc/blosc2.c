@@ -29,7 +29,7 @@
 #include "delta.h"
 #include "trunc-prec.h"
 #include "blosclz.h"
-//#include "ndlz.h"
+#include "ndlz.h"
 #include "ndlz8.h"
 #include "btune.h"
 
@@ -896,7 +896,7 @@ static int blosc_c(struct thread_context* thread_context, int32_t bsize,
 
       cbytes = lz4_wrap_compress((char*)ndlz_out, (size_t)ndlz_cbytes,
                                  (char*)dest, (size_t)maxout, accel, hash_table);
-
+/*
       cbytes = lizard_wrap_compress((char*)ndlz_out, (size_t)ndlz_cbytes,
                            (char*)dest, (size_t)maxout, accel);
 
@@ -1245,10 +1245,10 @@ static int blosc_d(
         if (token & 0x2) {  // no lz4 compression
           nbytes = ndlz8_decompress(src, (int) (-cbytes), _dest, (int) neblock);
         } else if (token & 0x4) { // no ndlz compression
-        /*  nbytes = LZ4_decompress_safe((char*)src, (char*)_dest,
+  /*        nbytes = LZ4_decompress_safe((char*)src, (char*)_dest,
                                        (int) (-cbytes), (int) neblock);
        /*   nbytes = blosclz_decompress(src, (int) (-cbytes), _dest, (int) neblock);
-
+/*
           nbytes = lizard_wrap_decompress((char*)src, (size_t) (-cbytes),
                                           (char*)_dest, (size_t)neblock);
 
@@ -1317,11 +1317,11 @@ static int blosc_d(
   //      nbytes = ndlz8_decompress(src, cbytes, _dest, (int) neblock);
 
         uint8_t *dec_out = malloc(neblock);
- /*       int32_t dec_bytes = LZ4_decompress_safe((char *) src, (char *) dec_out,
+  /*      int32_t dec_bytes = LZ4_decompress_safe((char *) src, (char *) dec_out,
                                                 (int) cbytes, (int) neblock);
 /*
         int32_t dec_bytes = blosclz_decompress(src, (int)cbytes, dec_out, (int)neblock);
-
+/*
         int32_t dec_bytes = lizard_wrap_decompress((char*)src, (size_t)cbytes,
                                         (char*)dec_out, (size_t)neblock);
 
