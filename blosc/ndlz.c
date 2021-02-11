@@ -80,7 +80,7 @@ int ndlz_compress(blosc2_context* context, const void* input, int length,
     return -1;
   }
 
-  if (NDLZ_UNEXPECT_CONDITIONAL(maxout < 1 + ndim * sizeof(int32_t))) {
+  if (NDLZ_UNEXPECT_CONDITIONAL(maxout < (int) (1 + ndim * sizeof(int32_t)))) {
     printf("Output too small \n");
     return -1;
   }
@@ -146,7 +146,6 @@ int ndlz_compress(blosc2_context* context, const void* input, int length,
       update_pair[2] = 0;
 
       if (NDLZ_UNEXPECT_CONDITIONAL(op + 16 + 1 > op_limit)) {
-        //    printf("Literal copy \n");
         return 0;
       }
 
@@ -164,7 +163,7 @@ int ndlz_compress(blosc2_context* context, const void* input, int length,
         } else {
           padding[1] = 4;
         }
-        for (int i = 0; i < padding[0]; i++) {
+        for (uint32_t i = 0; i < padding[0]; i++) {
           memcpy(op, &ip[orig + i * blockshape[1]], padding[1]);
           op += padding[1];
         }
@@ -193,7 +192,6 @@ int ndlz_compress(blosc2_context* context, const void* input, int length,
           bool same = true;
           buf_aux = obase + tab_cell[hash_cell];
           for(int i = 0; i < 16; i++){
-            // printf("buf_cell[i]: %u, buf2: %u \n", buf_cell[i], buf_aux[i]);
             if (buf_cell[i] != buf_aux[i]) {
               same = false;
               break;
@@ -234,7 +232,6 @@ int ndlz_compress(blosc2_context* context, const void* input, int length,
             if (tab_pair[hval] != 0) {
               buf_aux = obase + tab_pair[hval];
               for (int k = 0; k < 8; k++) {
-                //     printf("buf_pair[i]: %u, buf_aux: %u \n", buf_pair[k], buf_aux[k]);
                 if (buf_pair[k] != buf_aux[k]) {
                   same = false;
                   break;
@@ -269,7 +266,6 @@ int ndlz_compress(blosc2_context* context, const void* input, int length,
               if (tab_pair[hval] != 0) {
                 buf_aux = obase + tab_pair[hval];
                 for (k = 0; k < 8; k++) {
-                   //    printf("buf_pair[i]: %u, buf_aux: %u \n", buf_pair[k], buf_aux[k]);
                   if (buf_pair[k] != buf_aux[k]) {
                     same = false;
                     break;
@@ -312,7 +308,6 @@ int ndlz_compress(blosc2_context* context, const void* input, int length,
                 if (tab_triple[hval] != 0) {
                   buf_aux = obase + tab_triple[hval];
                   for (int l = 0; l < 12; l++) {
-                    // printf("bufthr[i]: %u, bufaux: %u \n", buf_triple[l], buf_aux[l]);
                     if (buf_triple[l] != buf_aux[l]) {
                       same = false;
                       break;
@@ -369,7 +364,6 @@ int ndlz_compress(blosc2_context* context, const void* input, int length,
               if (tab_pair[hval] != 0) {
                 buf_aux = obase + tab_pair[hval];
                 for(int k = 0; k < 8; k++){
-             //     printf("buf_pair[i]: %u, buf_aux: %u \n", buf_pair[k], buf_aux[k]);
                   if(buf_pair[k] != buf_aux[k]) {
                     same = false;
                     break;
@@ -438,10 +432,9 @@ int ndlz_compress(blosc2_context* context, const void* input, int length,
 
       }
       if((op - obase) > length) {
-     //   printf("Compressed data is bigger than input! \n");
+        printf("Compressed data is bigger than input! \n");
         return 0;
       }
-   //g   printf("\n token %u, pad [%u, %u] \n", token, padding[0], padding[1]);
     }
   }
 
@@ -523,6 +516,10 @@ int ndlz_decompress(const void* input, int length, void* output, int maxout) {
   /* we start with literal copy */
   ndim = *ip;
   ip ++;
+  if (ndim != 2) {
+    fprintf(stderr, "This codec only works for ndim = 2");
+    return -1;
+  }
   memcpy(&blockshape[0], ip, 4);
   ip += 4;
   memcpy(&blockshape[1], ip, 4);
@@ -537,7 +534,6 @@ int ndlz_decompress(const void* input, int length, void* output, int maxout) {
     i_stop[i] = eshape[i] / 4;
   }
 
- // printf("\n decomp \n");
 
   /* main loop */
   uint32_t ii[2];
@@ -561,7 +557,6 @@ int ndlz_decompress(const void* input, int length, void* output, int maxout) {
         padding[1] = 4;
       }
       token = *ip++;
-    //  printf("token %u, pad [%u, %u] \n", token, padding[0], padding[1]);
       if (token == 0){    // no match
         buffercpy = ip;
         ip += padding[0] * padding[1];
@@ -668,7 +663,7 @@ int ndlz_decompress(const void* input, int length, void* output, int maxout) {
         }
         buffercpy += padding[1];
       }
-      if (ind > maxout) {
+      if (ind > (uint32_t) maxout) {
         printf("Output size is bigger than max \n");
         return 0;
       }
@@ -680,7 +675,7 @@ int ndlz_decompress(const void* input, int length, void* output, int maxout) {
     printf("Output size is not compatible with embeded blockshape \n");
     return 0;
   }
-  if (ind > maxout) {
+  if (ind > (uint32_t) maxout) {
     printf("Output size is bigger than max \n");
     return 0;
   }

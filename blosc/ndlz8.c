@@ -91,20 +91,14 @@ int ndlz8_compress(blosc2_context* context, const void* input, int length,
   uint8_t* op = (uint8_t *) output;
   uint8_t* op_limit;
   uint32_t hval, hash_cell;
-//  uint32_t hash_6[3] = {0};
   uint32_t hash_triple[6] = {0};
   uint32_t hash_pair[7] = {0};
   uint8_t bufarea[cell_size];
   uint8_t* buf_cell = bufarea;
-//  uint8_t buf_6[48];
-//  uint8_t buf_triple[24];
-//  uint8_t buf_pair[16];
   uint8_t* buf_aux;
   uint32_t tab_cell[1U << 12U] = {0};
-//  uint32_t tab_6[1U << 12U] = {0};
   uint32_t tab_triple[1U << 12U] = {0};
   uint32_t tab_pair[1U << 12U] = {0};
-//  uint32_t update_6[3] = {0};
   uint32_t update_triple[6] = {0};
   uint32_t update_pair[7] = {0};
   uint32_t triple_match[3] = {0};
@@ -118,6 +112,8 @@ int ndlz8_compress(blosc2_context* context, const void* input, int length,
   // Initialize the hash table to distances of 0
   for (unsigned i = 0; i < (1U << 12U); i++) {
     tab_cell[i] = 0;
+    tab_triple[i] = 0;
+    tab_pair[i] = 0;
   }
 
   /* input and output buffer cannot be less than 64 (cells are 8x8) */
@@ -141,7 +137,6 @@ int ndlz8_compress(blosc2_context* context, const void* input, int length,
     i_stop[i] = (blockshape[i] + cell_shape - 1) / cell_shape;
   }
 
-//  printf("\n comp token \n");
 
   /* main loop */
   uint32_t padding[2];
@@ -149,7 +144,6 @@ int ndlz8_compress(blosc2_context* context, const void* input, int length,
   for (ii[0] = 0; ii[0] < i_stop[0]; ++ii[0]) {
     for (ii[1] = 0; ii[1] < i_stop[1]; ++ii[1]) {      // for each cell
       for (int h = 0; h < 7; h++){          // new cell -> new possible refereces
-//        update_6[h] = 0;
         update_pair[h] = 0;
         if (h != 6) {
           update_triple[h] = 0;
@@ -157,7 +151,6 @@ int ndlz8_compress(blosc2_context* context, const void* input, int length,
       }
 
       if (NDLZ_UNEXPECT_CONDITIONAL(op + cell_size + 1 > op_limit)) {
-        //    printf("Literal copy \n");
         return 0;
       }
 
@@ -188,12 +181,7 @@ int ndlz8_compress(blosc2_context* context, const void* input, int length,
           buf_cell += cell_shape;
         }
         buf_cell -= cell_size;
-/*
-        printf("\n buf_cell \n");
-        for (int i = 0; i < cell_size; i++) {
-          printf("%u, ", buf_cell[i]);
-        }
-*/
+
         const uint8_t* ref;
         uint32_t distance;
         uint8_t* anchor = op;    /* comparison starting-point */
@@ -210,7 +198,6 @@ int ndlz8_compress(blosc2_context* context, const void* input, int length,
           bool same = true;
           buf_aux = obase + tab_cell[hash_cell];
           for(int i = 0; i < cell_size; i++){
-            // printf("buf_cell[i]: %u, buf2: %u \n", buf_cell[i], buf_aux[i]);
             if (buf_cell[i] != buf_aux[i]) {
               same = false;
               break;
@@ -296,7 +283,6 @@ int ndlz8_compress(blosc2_context* context, const void* input, int length,
             if (tab_pair[hval] != 0) {
               buf_aux = obase + tab_pair[hval];
               for (int k = 0; k < 16; k++) {
-                //     printf("buf_pair[i]: %u, buf_aux: %u \n", buf_pair[k], buf_aux[k]);
                 if (buf_cell[pair_start + k] != buf_aux[k]) {
                   same = false;
                   break;
@@ -447,6 +433,10 @@ int ndlz8_decompress(const void* input, int length, void* output, int maxout) {
   /* we start with literal copy */
   ndim = *ip;
   ip ++;
+  if (ndim != 2) {
+    fprintf(stderr, "This codec only works for ndim = 2");
+    return -1;
+  }
   memcpy(&blockshape[0], ip, 4);
   ip += 4;
   memcpy(&blockshape[1], ip, 4);
@@ -461,7 +451,6 @@ int ndlz8_decompress(const void* input, int length, void* output, int maxout) {
     i_stop[i] = eshape[i] / cell_shape;
   }
 
- // printf("\n dec token \n");
 
   /* main loop */
   uint32_t ii[2];
@@ -486,7 +475,6 @@ int ndlz8_decompress(const void* input, int length, void* output, int maxout) {
       }
       token = *ip++;
       uint8_t match_type = (token >> 3U);
- //     printf("\n \n dec token %u, pad [%u, %u] \n", token, padding[0], padding[1]);
       if (token == 0){    // no match
         buffercpy = ip;
         ip += padding[0] * padding[1];
