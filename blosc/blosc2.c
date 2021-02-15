@@ -29,8 +29,8 @@
 #include "delta.h"
 #include "trunc-prec.h"
 #include "blosclz.h"
-#include "ndlz.h"
-#include "ndlz8.h"
+#include "ndlz4x4.h"
+#include "ndlz8x8.h"
 #include "btune.h"
 
 #if defined(HAVE_LZ4)

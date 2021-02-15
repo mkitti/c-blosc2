@@ -21,7 +21,7 @@
 #define XXH_INLINE_ALL
 #include <xxhash.c>
 #include <stdio.h>
-#include <ndlz.h>
+#include <ndlz4x4.h>
 
 
 

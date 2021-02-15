@@ -63,7 +63,7 @@ include_directories(${BLOSC_INCLUDE_DIRS})
 # library sources
 set(SOURCES blosc2.c blosclz.c fastcopy.c fastcopy.h schunk.c frame.c btune.c btune.h
         context.h delta.c delta.h shuffle-generic.c bitshuffle-generic.c trunc-prec.c trunc-prec.h
-        timestamp.c ndlz.c ndlz8.c eframe.c directories.c)
+        timestamp.c ndlz4x4.c ndlz8x8.c eframe.c directories.c)
 
 if(NOT CMAKE_SYSTEM_PROCESSOR STREQUAL arm64)
     if(COMPILER_SUPPORT_SSE2)

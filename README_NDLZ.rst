@@ -19,14 +19,14 @@ This way, graphs can be produced using the images results. This graphs
 are really useful to obtain clear conclusions about the evaluated codec
 quality.
 
-.. image:: /mnt/c/Users/sosca/CLionProjects/Caterva/contribs/c-blosc2/bench/img7.png
-  :width: 70%
+.. image:: /images/img7.png
+  :width: 90%
   :align: center
 
 The following graph analyzes the previous image compression using
 different codecs:
 
-.. image:: /mnt/c/Users/sosca/CLionProjects/Caterva/contribs/c-blosc2/bench/graph_image7.png
-  :width: 70%
+.. image:: /images/graph_image7.png
+  :width: 90%
   :align: center
 
